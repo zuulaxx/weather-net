@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Météo sur Weather-Net</title>
+  <link rel="icon" type="image/gif" href="img/weatherdefault.gif" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    h1, h2 {
+      color: #ffffff;
+      background-color: #007BFF;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      font-size: 24px;
+      animation: fadeIn 1s ease-in;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    h2 {
+      background-color: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #dddddd;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #0056b3;
+      color: white;
+    }
+    tr {
+      background-color: #d7d7d7;
+    }
+    tr:hover {
+      background-color: #7DAAF0;
+      transition: background-color 0.3s ease;
+    }
+    p {
+      background-color: #d7d7d7;
+      padding: 10px;
+      border-radius: 5px;
+      animation: fadeIn 1s ease-in;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+    .forecast-table {
+      border-spacing: 0;
+    }
+    .fade-in {
+      animation: fadeIn 1s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .hover-effect:hover {
+      transform: scale(1.05);
+      transition: transform 0.3s;
+    }
+    img {
+      display: inline;
+      margin: 0 10px 0 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease-in-out;
+      vertical-align: middle;
+    }
+    img:hover {
+      transform: rotate(390deg);
+    }
+    .temperature {
+      font-weight: bold;
+      font-size: 1.2em;
+      color: #ff5722;
+    }
+    .time {
+      font-style: italic;
+      color: #bbbbbb;
+    }
+    .popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      text-align: center;
+      border-radius: 10px;
+    }
+    .popup input {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px 0;
+      width: 80%;
+    }
+    .popup button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .change-city-button {
+    position:fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #2f5e91;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 100;
+  }
+  #weather-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background-size: cover; /* Assure que l'image de fond couvre tout le conteneur */
+}
+
+
+  </style>
+</head>
+<body><div id="weather-background" class="fade-in"></div>
+<button class="change-city-button" onclick="showCityPopup()">Changer de ville</button>
+  <div class="popup" id="city-popup">
+    <h2>Veuillez saisir votre ville</h2>
+    <input type="text" id="city-input" placeholder="Entrez le nom de votre ville">
+    <button onclick="submitCity()">Valider</button>
+  </div>
+  <h1 class="fade-in">Météo Actuelle</h1>
+  <div id="weather-info">
+    <p>Chargement des données météo...</p>
+  </div>
+  <h2 class="fade-in">Prévisions pour les 24 prochaines heures :</h2>
+  <table class="forecast-table">
+    <thead>
+      <tr>
+        <th>Heure</th>
+        <th>Température</th>
+        <th>Icône</th>
+        <th>Probabilité de précipitation (%)</th>
+      </tr>
+    </thead>
+    <tbody id="forecast-rows">
+      <tr>
+        <td colspan="4">Chargement des prévisions...</td>
+      </tr>
+    </tbody>
+  </table>
+  <h2 class="fade-in">Températures minimales et maximales :</h2>
+  <p id="min-max-temp">Chargement des températures...</p>
+  <h2 class="fade-in">Heures de lever et de coucher du soleil :</h2>
+  <p id="sunrise-sunset">Chargement des heures...</p>
+  <footer>
+    <h2 class="fade-in">WeatherNotify (Others Infos) :</h2>
+    <p id="last-update">Chargement des informations...</p>
+  </footer>
+  <script>
+    const weatherApiKey = "55f32991dd2307c76e304f062db402df";
+    let city = "";
+    const lang = "fr";
+
+    function submitCity() {
+  city = document.getElementById("city-input").value;
+  if (city) {
+    document.getElementById("city-popup").style.display = "none";
+    updateWeather();
+    setInterval(updateWeather, 60 * 60 * 1000); // Mettre à jour toutes les heures
+  } else {
+    // Afficher un message d'erreur pour indiquer que le champ est vide
+    alert("Veuillez saisir le nom de votre ville.");
+  }
+}
+
+
+    async function fetchData(url) {
+      try {
+        const response = await fetch(url);
+        return await response.json();
+      } catch (error) {
+        console.error("Erreur lors de la récupération des données:", error);
+        return null;
+      }
+    }
+
+    async function getWeather() {
+  const weatherApiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${weatherApiKey}&units=metric&lang=${lang}`;
+  const data = await fetchData(weatherApiUrl);
+  if (!data || !data.main || !data.weather || !data.wind || !data.sys) {
+    // Afficher un message d'erreur dans l'interface utilisateur
+    document.getElementById("weather-info").innerHTML = `
+      <p>Erreur : Ville non trouvée. Veuillez vérifier le nom de la ville.</p>
+    `;
+    return {
+      description: "Erreur lors de la récupération des données météo.",
+      temperature: "",
+      feelsLike: "",
+      iconUrl: "",
+      pressure: "",
+      humidity: "",
+      windSpeed: "",
+      sunrise: "",
+      sunset: "",
+      latitude: "",
+      longitude: "",
+      visibility: "",
+      lastUpdate: "",
+    };
+  }
+
+      const weatherDescription = data.weather[0].description;
+      const temperature = data.main.temp;
+      const feelsLike = data.main.feels_like;
+      const icon = data.weather[0].icon;
+      const iconUrl = `http://openweathermap.org/img/wn/${icon}.png`;
+      const pressure = data.main.pressure;
+      const humidity = data.main.humidity;
+      const windSpeed = data.wind.speed * 3.6;
+      const sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const latitude = data.coord.lat;
+      const longitude = data.coord.lon;
+      const visibility = data.visibility / 1000;
+      const lastUpdate = new Date(data.dt * 1000).toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      return {
+        description: weatherDescription,
+        temperature: temperature,
+        feelsLike: feelsLike,
+        iconUrl: iconUrl,
+        pressure: pressure,
+        humidity: humidity,
+        windSpeed: windSpeed,
+        sunrise: sunrise,
+        sunset: sunset,
+        latitude: latitude,
+        longitude: longitude,
+        visibility: visibility.toFixed(2),
+        lastUpdate: lastUpdate,
+      };
+    }
+
+    async function getHourlyForecast() {
+      const forecastApiUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${weatherApiKey}&units=metric&lang=${lang}`;
+      const data = await fetchData(forecastApiUrl);
+      if (!data || !data.list) {
+        return {
+          forecasts: [],
+          minTemp: "",
+          maxTemp: "",
+        };
+      }
+
+      const filteredForecasts = data.list
+        .filter(forecast => {
+          const forecastTime = new Date(forecast.dt_txt).getTime();
+          const now = new Date().getTime();
+          return forecastTime >= now && forecastTime <= now + 24 * 60 * 60 * 1000;
+        })
+        .sort((a, b) => new Date(a.dt_txt) - new Date(b.dt_txt));
+
+      let minTemp = Infinity;
+      let maxTemp = -Infinity;
+
+      filteredForecasts.forEach(forecast => {
+        const temp = forecast.main.temp;
+        if (temp < minTemp) minTemp = temp;
+        if (temp > maxTemp) maxTemp = temp;
+      });
+
+      const hourlyForecasts = filteredForecasts.map(forecast => ({
+        time: new Date(forecast.dt_txt).toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        temperature: forecast.main.temp,
+        icon: forecast.weather[0].icon,
+        precipitation: forecast.pop || 0,
+      }));
+
+      return {
+        forecasts: hourlyForecasts,
+        minTemp: minTemp,
+        maxTemp: maxTemp,
+      };
+    }
+
+    async function getSunriseSunset() {
+      const weatherApiUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${weatherApiKey}&units=metric&lang=${lang}`;
+      const data = await fetchData(weatherApiUrl);
+      if (!data || !data.sys) {
+        return {
+          sunrise: "",
+          sunset: "",
+        };
+      }
+
+      const sunrise = new Date(data.sys.sunrise * 1000).toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      const sunset = new Date(data.sys.sunset * 1000).toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      return {
+        sunrise: sunrise,
+        sunset: sunset,
+      };
+    }
+
+    async function updateWeather() {
+  if (!city) return;
+
+  const weather = await getWeather();
+  const forecasts = await getHourlyForecast();
+  const { sunrise, sunset } = await getSunriseSunset();
+
+  document.getElementById("weather-info").innerHTML = `
+    <p class="hover-effect">La météo est ${weather.description} avec ${weather.temperature}°C (ressentie ${weather.feelsLike}°C)
+      <img src="${weather.iconUrl}" alt="Icône de la météo" class="fade-in" style="display: block; margin: 0 auto; width: 50px; height: 50px; vertical-align: middle;" /></p>
+    <p class="hover-effect">Pression atmosphérique : ${weather.pressure} hPa</p>
+    <p class="hover-effect">Humidité : ${weather.humidity}%</p>
+    <p class="hover-effect">Visibilité : ${weather.visibility} km</p>
+    <p class="hover-effect">Vitesse du vent : ${weather.windSpeed.toFixed(2)} km/h</p>
+    <p class="hover-effect">Coordonnées GPS pour ${city}: [${weather.latitude}, ${weather.longitude}]</p>
+  `;
+
+  const forecastRows = forecasts.forecasts
+    .map(forecast => `
+      <tr>
+        <td>${forecast.time}</td>
+        <td>${forecast.temperature}°C</td>
+        <td><img src="http://openweathermap.org/img/wn/${forecast.icon}.png" alt="Icône météo" style="display: block; margin: 0 auto; width: 50px; height: 50px; vertical-align: middle;" /></td>
+        <td>${forecast.precipitation * 100}%</td>
+      </tr>
+    `)
+    .join("");
+
+  document.getElementById("forecast-rows").innerHTML = forecastRows;
+  document.getElementById("min-max-temp").innerText = `❄️/🌡️ Température min/max : ${forecasts.minTemp}°C / ${forecasts.maxTemp}°C`;
+  document.getElementById("sunrise-sunset").innerHTML = `🌅Lever du soleil : ${sunrise} 🌅<br>🌇Coucher du soleil : ${sunset} 🌇`;
+  document.getElementById("last-update").innerText = `Dernière mise à jour : ${weather.lastUpdate}`;
+
+  // Mettre à jour l'arrière-plan en fonction de la description météorologique
+  updateBackground(weather.description);
+}
+
+function updateBackground(description) {
+  const background = document.getElementById("weather-background");
+  if (!background) return;
+
+  switch (description.toLowerCase()) {
+    case 'ciel dégagé':
+      background.style.backgroundImage = "url('img/clear-sky.gif')";
+      break;
+    case 'peu nuageux':
+    case 'couvert':
+    case 'nuages épars':
+    case 'nuageux':
+    case 'brume':
+    case 'fumée':
+    case 'brume sèche':
+    case 'poussière':
+    case 'brouillard':
+    case 'partiellement nuageux':
+      background.style.backgroundImage = "url('img/cloudy.gif')";
+      break;
+    case 'pluie légère':
+    case 'pluie modérée':
+    case 'averses de pluie':
+    case 'forte pluie':
+    case 'pluie':
+    case 'bruine légère':
+    case 'orages':
+    case 'raffales':
+    case 'tornade':
+      background.style.backgroundImage = "url('img/rainy.gif')";
+      break;
+    case 'neige':
+    case 'légères chutes de neige':
+      background.style.backgroundImage = "url('img/snowy.gif')";
+      break;
+    default:
+      background.style.backgroundImage = "url('img/weatherdefault.gif')";
+      break;
+  }
+
+  background.style.backgroundSize = "cover"; // Assure que l'image de fond s'adapte à la taille du conteneur
+}
+
+
+
+
+    function showCityPopup() {
+    document.getElementById("city-input").value = ""; // Efface le champ de saisie
+    document.getElementById("city-popup").style.display = "block"; // Affiche à nouveau le popup de saisie
+  }
+
+    // Pas de mise à jour au chargement de la page pour éviter une erreur avant que la ville ne soit définie
+  </script>
+</body>
+</html>
