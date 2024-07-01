@@ -357,7 +357,7 @@
     <p class="hover-effect">Humidité : ${weather.humidity}%</p>
     <p class="hover-effect">Visibilité : ${weather.visibility} km</p>
     <p class="hover-effect">Vitesse du vent : ${weather.windSpeed.toFixed(2)} km/h</p>
-    <p class="hover-effect">Coordonnées GPS pour ${city}: [${weather.latitude}, ${weather.longitude}]</p>
+    <p class="hover-effect">Coordonnées GPS pour ${city}: <a href="https://www.google.com/maps/place/${weather.latitude}, ${weather.longitude}">[${weather.latitude}, ${weather.longitude}]</a></p>
   `;
 
   const forecastRows = forecasts.forecasts
